@@ -1,0 +1,32 @@
+# --- Environment files (never commit secrets) ---
+.env
+.env.local
+.env.*.local
+
+# --- n8n config & runtime data ---
+.n8n/
+n8n_data/
+n8n_db/
+
+# --- Database & cache volumes ---
+pg_data/
+postgres_data/
+redis_data/
+
+# --- Traefik certificates & state ---
+acme.json
+letsencrypt/
+
+# --- Logs ---
+*.log
+logs/
+docker-logs/
+
+# --- OS/system junk ---
+.DS_Store
+Thumbs.db
+
+# --- Editor/IDE settings ---
+.vscode/
+.idea/
+*.swp
