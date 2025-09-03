@@ -336,7 +336,7 @@ docker compose ps --format "table {{.Names}}\t{{.Status}}"
 ```
 You will see logs:
 ```bash
-docker compose ps --format "table {{.Names}}\t{{.Status}}"
+docker compose ps --format "table {{.Name}}\t{{.Status}}"
 <no value>                     STATUS
 n8n-main                       Up 2 minutes (healthy)
 postgres                       Up 2 minutes (healthy)
