@@ -43,46 +43,31 @@ Scalable **n8n** deployment on an **Ubuntu VPS**, running in **Queue Mode** with
 ---
 
 ## Architecture Overview
-
-```text
-                   ┌───────────────────┐
-                   │   Traefik Proxy   │
-                   │ (Routes traffic)  │
-                   └─────────┬─────────┘
-                             │
-                             ▼
-                   ┌───────────────────┐
-                   │   n8n-Main (UI)   │
-                   │  - Editor & API   │
-                   │  - Webhooks       │
-                   │  - Schedules      │
-                   └─────────┬─────────┘
-                             │
-                             │ Enqueues jobs
-                             ▼
-                   ┌───────────────────┐
-                   │      Redis        │
-                   │   (BullMQ Queue)  │
-                   └─────────┬─────────┘
-                             │
-        ┌────────────────────┴────────────────────┐
-        │                                         │
-        ▼                                         ▼
-┌───────────────────┐                   ┌───────────────────┐
-│   Worker #1       │                   │   Worker #2       │
-│ - Executes jobs   │                   │ - Executes jobs   │
-│ - Uses concurrency│                   │ - Uses concurrency│
-└─────────┬─────────┘                   └─────────┬─────────┘
-          │                                       │
-          └──────────────────┬────────────────────┘
-                             │
-                             ▼
-                   ┌───────────────────┐
-                   │   Postgres DB     │
-                   │ - Workflows       │
-                   │ - Executions      │
-                   │ - Credentials     │
-                   └───────────────────┘
+```mermaid
+flowchart LR
+user["User"]
+subgraph host["Docker Host (Ubuntu VPS)"]
+  direction LR
+  traefik["Traefik<br/>HTTPS & routing"]
+  subgraph n8n_stack["n8n Stack (Queue Mode)"]
+    direction LR
+    main["n8n Main<br/>(UI, API, Webhooks)"]
+    direction TB
+    redis[("Redis<br/>BullMQ Queue")]
+    postgres[("PostgreSQL<br/>Workflows<br/>Executions<br/>Credentials")]
+    direction TB
+    worker1["n8n Worker #1"]
+    worker2["n8n Worker #2"]
+  end
+end
+user -->|HTTPS 443| traefik
+traefik -->|HTTPS 443| main
+main -->|Enqueue jobs 6379| redis
+main <-->|SQL 5432| postgres
+redis <--> |Jobs/Ack 6379| worker1
+redis <--> |Jobs/Ack 6379| worker2
+postgres <--> |SQL 5432| worker1
+postgres <--> |SQL 5432| worker2
 ```
 
 ## Task Processing Flow (Queue Mode)
