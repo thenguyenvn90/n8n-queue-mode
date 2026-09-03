@@ -146,7 +146,21 @@ services:
     env_file: [.env]
     environment:
       - TZ=${GENERIC_TIMEZONE}
-    command: ["worker", "--concurrency=${N8N_WORKER_CONCURRENCY}"]
+      # A queue worker exposes no health endpoint at all without this, which is why
+      # the healthcheck below could not exist before. It is also what lets an
+      # orchestrator notice a worker that is running but not answering.
+      - QUEUE_HEALTH_CHECK_ACTIVE=true
+    # --concurrency is a CLI flag with no environment fallback — confirmed from
+    # `n8n worker --help` on a running container — so it has to be interpolated
+    # here rather than set in .env alone. The default below is n8n's own; n8n logs
+    # a warning below 5 that the environment may be unstable.
+    #
+    # Which way to grow, once you can measure it: a Node worker runs one JS thread
+    # and saturates near 1.0 CPU cores however many the host has. If slots are full
+    # while worker CPU stays low, the work is I/O-bound and a higher number is free
+    # throughput. If worker CPU approaches one core, the answer is a second worker
+    # process — raising concurrency there only inflates per-job latency.
+    command: ["worker", "--concurrency=${N8N_WORKER_CONCURRENCY:-10}"]
     volumes:
       - n8n-data:/home/node/.n8n
       - ./local-files:/files
@@ -155,6 +169,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:${N8N_PORT:-5678}/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
     networks: [n8n-network]
     security_opt: [no-new-privileges:true]
 
